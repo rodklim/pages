@@ -252,78 +252,34 @@
 
   .reset-btn:hover { background: var(--jt-blue-d); }
 
-  /* ---- Raffle pop-up ---- */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(20, 33, 61, 0.55);
-    z-index: 100;
-    padding: 20px;
+  .toolbar .btns {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
   }
 
-  .overlay.show { display: flex; animation: fade 0.2s ease-out; }
-
-  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-
-  .modal {
-    position: relative;
-    max-width: 380px;
-    width: 100%;
-    text-align: center;
-    color: #fff;
-    border-radius: 18px;
-    padding: 34px 28px 28px;
-    background:
-      linear-gradient(180deg, var(--jt-blue) 0%, var(--jt-blue) 50%, var(--jt-red) 50%, var(--jt-red) 100%);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.35);
-    animation: popin 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-  }
-
-  @keyframes popin {
-    0%   { transform: scale(0.6); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  .modal .modal-star {
-    font-size: 50px;
-    line-height: 1;
-    text-shadow: 0 0 14px rgba(255,255,255,0.85);
-  }
-
-  .modal h2 {
-    margin: 10px 0 6px;
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.35);
-    font-family: "Georgia", serif;
-  }
-
-  .modal .entries {
-    margin: 6px 0 18px;
-    font-size: 17px;
-    font-weight: 600;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-  }
-
-  .modal .modal-btn {
+  .done-btn {
     font-family: inherit;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--jt-blue-d);
-    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--jt-red);
     border: none;
-    border-radius: 9px;
-    padding: 11px 22px;
+    border-radius: 8px;
+    padding: 8px 16px;
     cursor: pointer;
-    transition: transform 0.12s ease;
+    transition: background 0.15s ease;
   }
 
-  .modal .modal-btn:hover { transform: translateY(-1px); }
+  .done-btn:hover { background: var(--jt-red-d); }
+
+  .done-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  /* hide buttons while the screenshot is being taken */
+  .page.capturing .toolbar .btns { visibility: hidden; }
 
   /* ---- Print ---- */
   @media print {
@@ -363,7 +319,10 @@
 
     <div class="toolbar">
       <span class="status" id="status">Click a square to mark it &mdash; your marks save in this browser.</span>
-      <button class="reset-btn" id="reset" type="button">Reset card</button>
+      <div class="btns">
+        <button class="reset-btn" id="reset" type="button">Reset card</button>
+        <button class="done-btn" id="done" type="button">I&rsquo;m done &mdash; save my card</button>
+      </div>
     </div>
 
     <main class="board" id="board">
@@ -389,15 +348,6 @@
     </main>
   </div>
 
-  <div class="overlay" id="overlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-star">&#9733;</div>
-      <h2 id="modalTitle">BINGO!</h2>
-      <p class="entries" id="modalEntries">You get 1 raffle entry!</p>
-      <button class="modal-btn" id="modalClose" type="button">Keep playing</button>
-    </div>
-  </div>
-
   <script>
     (function () {
       var STORAGE_KEY = "juneteenth-bingo-marks";
@@ -406,20 +356,14 @@
       var board = document.getElementById("board");
       var statusEl = document.getElementById("status");
       var resetBtn = document.getElementById("reset");
-      var overlay = document.getElementById("overlay");
-      var modalEntries = document.getElementById("modalEntries");
-      var modalClose = document.getElementById("modalClose");
       var cells = Array.prototype.slice.call(board.querySelectorAll(".cell"));
 
-      // 4x4 winning lines: 4 rows + 4 columns (diagonals do NOT count)
+      // 4x4 winning lines: 4 rows + 4 columns + 2 diagonals = 10 possible bingos
       var lines = [
         [0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],
-        [0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15]
+        [0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15],
+        [0,5,10,15],[3,6,9,12]
       ];
-
-      // remember how many lines were complete last time, so the pop-up
-      // only fires when a NEW line is achieved
-      var prevLineCount = 0;
 
       function load() {
         try {
@@ -440,46 +384,22 @@
         }).length;
       }
 
-      function showPopup(entries) {
-        var word = entries === 1 ? "entry" : "entries";
-        var name = nameInput.value.trim();
-        var lead = name ? name + ", you get " : "You get ";
-        modalEntries.textContent = lead + entries + " raffle " + word + "!";
-        overlay.classList.add("show");
-      }
-
-      function hidePopup() {
-        overlay.classList.remove("show");
-      }
-
-      // update the status line and, when popup is allowed, fire the raffle
-      // pop-up if the number of completed lines has gone UP
-      // entries = one per completed line, capped at 5 (a full blackout = 5)
-      var MAX_ENTRIES = 5;
-
-      function update(allowPopup) {
+      // each completed line (bingo) = 1 raffle entry, shown in the status text
+      function update() {
         var count = cells.filter(function (c) { return c.classList.contains("marked"); }).length;
-        var lineCount = countLines();
-        var entries = Math.min(lineCount, MAX_ENTRIES);
+        var entries = countLines();
+        var word = entries === 1 ? "entry" : "entries";
 
         if (count === 16) {
-          statusEl.textContent = "🎉 BLACKOUT! All 16 squares — " + entries + " raffle entries!";
+          statusEl.textContent = "\uD83C\uDF89 You completed the whole card! All 16 squares \u2014 " + entries + " raffle " + word + "!";
           statusEl.className = "status win";
-        } else if (lineCount > 0) {
-          var word = entries === 1 ? "entry" : "entries";
-          statusEl.textContent = "🎉 BINGO! " + lineCount + " line" + (lineCount === 1 ? "" : "s") +
-            " — " + entries + " raffle " + word + "!";
+        } else if (entries > 0) {
+          statusEl.textContent = "\uD83C\uDF89 BINGO! " + entries + " raffle " + word + " so far \u2014 keep going!";
           statusEl.className = "status win";
         } else {
-          statusEl.textContent = count + " of 16 marked — your marks save in this browser.";
+          statusEl.textContent = count + " of 16 marked \u2014 your marks save in this browser.";
           statusEl.className = "status";
         }
-
-        // pop up when a new line is completed AND it earns a new entry
-        if (allowPopup && lineCount > prevLineCount && entries > Math.min(prevLineCount, MAX_ENTRIES)) {
-          showPopup(entries);
-        }
-        prevLineCount = lineCount;
       }
 
       board.addEventListener("click", function (e) {
@@ -487,19 +407,65 @@
         if (!cell) return;
         cell.classList.toggle("marked");
         save();
-        update(true);
+        update();
       });
 
       resetBtn.addEventListener("click", function () {
         cells.forEach(function (c) { c.classList.remove("marked"); });
         save();
-        hidePopup();
-        update(false);
+        update();
       });
 
-      modalClose.addEventListener("click", hidePopup);
-      overlay.addEventListener("click", function (e) {
-        if (e.target === overlay) hidePopup();
+      // "I'm done" — save a PNG of the card
+      var doneBtn = document.getElementById("done");
+      var page = document.querySelector(".page");
+
+      function loadHtml2Canvas() {
+        return new Promise(function (resolve, reject) {
+          if (window.html2canvas) { resolve(window.html2canvas); return; }
+          var s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+          s.onload = function () { resolve(window.html2canvas); };
+          s.onerror = function () { reject(new Error("Could not load screenshot library")); };
+          document.head.appendChild(s);
+        });
+      }
+
+      function slugify(str) {
+        return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      }
+
+      doneBtn.addEventListener("click", function () {
+        if (!nameInput.value.trim()) {
+          nameInput.focus();
+          statusEl.textContent = "Add your name first so we know whose card this is!";
+          return;
+        }
+        doneBtn.disabled = true;
+        doneBtn.textContent = "Saving\u2026";
+        page.classList.add("capturing");
+
+        loadHtml2Canvas()
+          .then(function (h2c) {
+            return h2c(page, { scale: 2, backgroundColor: "#f7f9fc", useCORS: true });
+          })
+          .then(function (canvas) {
+            var name = slugify(nameInput.value.trim()) || "card";
+            var link = document.createElement("a");
+            link.download = "juneteenth-bingo-" + name + ".png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            statusEl.textContent = "Card saved! Post it in #bipoc to submit. \uD83C\uDF89";
+            statusEl.className = "status win";
+          })
+          .catch(function () {
+            statusEl.textContent = "Hmm, the screenshot didn't work \u2014 try a regular screenshot instead.";
+          })
+          .finally(function () {
+            page.classList.remove("capturing");
+            doneBtn.disabled = false;
+            doneBtn.textContent = "I\u2019m done \u2014 save my card";
+          });
       });
 
       // restore + persist the player's name
@@ -509,7 +475,7 @@
       });
 
       load();
-      update(false);
+      update();
     })();
   </script>
 </body>
