@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juneteenth Bingo!</title>
+<style>
+  :root {
+    --jt-blue:   #00529b;   /* flag blue (top half) */
+    --jt-blue-d: #003a6e;
+    --jt-red:    #c8102e;   /* flag red (bottom half) */
+    --jt-red-d:  #9c0c24;
+    --jt-white:  #ffffff;
+    --ink:       #14213d;
+    --paper:     #f7f9fc;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Georgia", "Times New Roman", serif;
+  }
+
+  .page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 28px 28px 40px;
+  }
+
+  /* ---- Header: official flag motif (blue over red, horizon arc, bursting star) ---- */
+  header {
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    margin-bottom: 24px;
+    border-radius: 16px;
+    padding: 30px 20px 34px;
+    color: #fff;
+    background:
+      linear-gradient(180deg,
+        var(--jt-blue) 0%,
+        var(--jt-blue) 48%,
+        var(--jt-red) 52%,
+        var(--jt-red) 100%);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+  }
+
+  /* the "new horizon" arc that splits the flag */
+  header::before {
+    content: "";
+    position: absolute;
+    left: -20%;
+    right: -20%;
+    top: 50%;
+    height: 220px;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    border-top: 4px solid rgba(255,255,255,0.85);
+    pointer-events: none;
+  }
+
+  header .star {
+    font-size: 54px;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 14px rgba(255,255,255,0.85), 0 2px 4px rgba(0,0,0,0.3);
+    position: relative;
+    z-index: 2;
+  }
+
+  header .title {
+    margin: 6px 0 0;
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    position: relative;
+    z-index: 2;
+  }
+
+  header .subtitle {
+    margin: 10px 0 0;
+    font-size: 15px;
+    font-style: italic;
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    position: relative;
+    z-index: 2;
+  }
+
+  header .date {
+    margin: 4px 0 0;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    opacity: 0.92;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ---- Grid ---- */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 11px;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.35;
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #fff;
+    border: 2px solid var(--jt-blue);
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+  }
+
+  /* marked state: dim the prompt and drop a bold flag-star stamp on top */
+  .cell.marked {
+    background: #eef3fb;
+    color: #8a93a6;
+  }
+
+  .cell.marked .label { opacity: 0.45; }
+
+  .cell .stamp {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+    color: var(--jt-red);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    pointer-events: none;
+    animation: pop 0.18s ease-out;
+  }
+
+  .cell.marked .stamp { display: flex; }
+
+  @keyframes pop {
+    0%   { transform: scale(0.3); opacity: 0; }
+    70%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* alternate the two flag colours like a checkerboard for rhythm */
+  .cell:nth-child(8n+2),
+  .cell:nth-child(8n+4),
+  .cell:nth-child(8n+5),
+  .cell:nth-child(8n+7) {
+    border-color: var(--jt-red);
+  }
+
+  /* small star watermark in each corner */
+  .cell::after {
+    content: "\2605";
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+    color: rgba(0,0,0,0.12);
+  }
+
+  .cell:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.16);
+  }
+
+  /* ---- Name field ---- */
+  .namerow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  .namerow label {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .namerow input {
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 11px 16px;
+    min-width: 280px;
+    color: var(--ink);
+    background: #fff;
+    border: 2px solid var(--jt-blue);
+    border-radius: 8px;
+    outline: none;
+  }
+
+  .namerow input:focus { border-color: var(--jt-red); }
+
+  /* ---- Toolbar / win banner ---- */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 16px;
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  .status {
+    font-size: 18px;
+    font-weight: 700;
+    color: #5a6478;
+  }
+
+  .status.win {
+    color: var(--jt-red);
+    font-weight: 800;
+    font-size: 20px;
+  }
+
+  .reset-btn {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--jt-blue);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .reset-btn:hover { background: var(--jt-blue-d); }
+
+  /* ---- Raffle pop-up ---- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 33, 61, 0.55);
+    z-index: 100;
+    padding: 20px;
+  }
+
+  .overlay.show { display: flex; animation: fade 0.2s ease-out; }
+
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    position: relative;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    border-radius: 18px;
+    padding: 34px 28px 28px;
+    background:
+      linear-gradient(180deg, var(--jt-blue) 0%, var(--jt-blue) 50%, var(--jt-red) 50%, var(--jt-red) 100%);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+    animation: popin 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  @keyframes popin {
+    0%   { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .modal .modal-star {
+    font-size: 50px;
+    line-height: 1;
+    text-shadow: 0 0 14px rgba(255,255,255,0.85);
+  }
+
+  .modal h2 {
+    margin: 10px 0 6px;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.35);
+    font-family: "Georgia", serif;
+  }
+
+  .modal .entries {
+    margin: 6px 0 18px;
+    font-size: 17px;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+
+  .modal .modal-btn {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--jt-blue-d);
+    background: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 11px 22px;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+
+  .modal .modal-btn:hover { transform: translateY(-1px); }
+
+  /* ---- Print ---- */
+  @media print {
+    @page { size: portrait; margin: 12mm; }
+    html, body { background: #fff; }
+    .page { padding: 0; max-width: none; }
+    header, .cell {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .cell { box-shadow: none; font-size: 17px; cursor: default; }
+    header { box-shadow: none; margin-bottom: 16px; }
+    .cell:hover { transform: none; box-shadow: none; }
+    .toolbar { display: none; }
+    .namerow input {
+      border: none;
+      border-bottom: 2px solid var(--ink);
+      border-radius: 0;
+      min-width: 220px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="star">&#9733;</div>
+      <h1 class="title">Juneteenth Bingo!</h1>
+      <p class="subtitle">Mark a square when it&rsquo;s true for you &middot; Celebrate, learn &amp; share in #bipoc</p>
+      <p class="date">Freedom Day &bull; June 19, 1865</p>
+    </header>
+
+    <div class="namerow">
+      <label for="playerName">Player:</label>
+      <input type="text" id="playerName" placeholder="Enter your name" autocomplete="off" maxlength="60">
+    </div>
+
+    <div class="toolbar">
+      <span class="status" id="status">Click a square to mark it &mdash; your marks save in this browser.</span>
+      <button class="reset-btn" id="reset" type="button">Reset card</button>
+    </div>
+
+    <main class="board" id="board">
+      <div class="cell"><span class="label">Know another name Juneteenth goes by</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Followed a new Black creator, author, or educator on social media &mdash; share in #bipoc</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have been to a Black-owned restaurant within 5 miles of you</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have learned about your own family&rsquo;s history or cultural roots</span><span class="stamp">&#9733;</span></div>
+
+      <div class="cell"><span class="label">Share this bingo card with one coworker or someone not a member of #bipoc</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Donated to or shopped at a Black-owned business this year</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have participated in an ERG event this year</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Name a Black musician who shaped a genre, and share in #bipoc</span><span class="stamp">&#9733;</span></div>
+
+      <div class="cell"><span class="label">Recommend a book, film, or show by a Black creator to #bipoc</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Can name at least one Black civil rights leader</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have attended a parade, festival, or cultural celebration this year</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have volunteered in your community this year</span><span class="stamp">&#9733;</span></div>
+
+      <div class="cell"><span class="label">Can name a Historically Black College or University (HBCU)</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have watched a film directed by a Black filmmaker</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Have attended/are planning to attend a concert by a Black artist</span><span class="stamp">&#9733;</span></div>
+      <div class="cell"><span class="label">Shared something about Juneteenth outside of work (with family, friends, etc.) &mdash; share in #bipoc</span><span class="stamp">&#9733;</span></div>
+    </main>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-star">&#9733;</div>
+      <h2 id="modalTitle">BINGO!</h2>
+      <p class="entries" id="modalEntries">You get 1 raffle entry!</p>
+      <button class="modal-btn" id="modalClose" type="button">Keep playing</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = "juneteenth-bingo-marks";
+      var NAME_KEY = "juneteenth-bingo-name";
+      var nameInput = document.getElementById("playerName");
+      var board = document.getElementById("board");
+      var statusEl = document.getElementById("status");
+      var resetBtn = document.getElementById("reset");
+      var overlay = document.getElementById("overlay");
+      var modalEntries = document.getElementById("modalEntries");
+      var modalClose = document.getElementById("modalClose");
+      var cells = Array.prototype.slice.call(board.querySelectorAll(".cell"));
+
+      // 4x4 winning lines: 4 rows + 4 columns (diagonals do NOT count)
+      var lines = [
+        [0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],
+        [0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15]
+      ];
+
+      // remember how many lines were complete last time, so the pop-up
+      // only fires when a NEW line is achieved
+      var prevLineCount = 0;
+
+      function load() {
+        try {
+          var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          saved.forEach(function (i) { if (cells[i]) cells[i].classList.add("marked"); });
+        } catch (e) { /* ignore */ }
+      }
+
+      function save() {
+        var marked = [];
+        cells.forEach(function (c, i) { if (c.classList.contains("marked")) marked.push(i); });
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(marked)); } catch (e) {}
+      }
+
+      function countLines() {
+        return lines.filter(function (line) {
+          return line.every(function (i) { return cells[i].classList.contains("marked"); });
+        }).length;
+      }
+
+      function showPopup(entries) {
+        var word = entries === 1 ? "entry" : "entries";
+        var name = nameInput.value.trim();
+        var lead = name ? name + ", you get " : "You get ";
+        modalEntries.textContent = lead + entries + " raffle " + word + "!";
+        overlay.classList.add("show");
+      }
+
+      function hidePopup() {
+        overlay.classList.remove("show");
+      }
+
+      // update the status line and, when popup is allowed, fire the raffle
+      // pop-up if the number of completed lines has gone UP
+      // entries = one per completed line, capped at 5 (a full blackout = 5)
+      var MAX_ENTRIES = 5;
+
+      function update(allowPopup) {
+        var count = cells.filter(function (c) { return c.classList.contains("marked"); }).length;
+        var lineCount = countLines();
+        var entries = Math.min(lineCount, MAX_ENTRIES);
+
+        if (count === 16) {
+          statusEl.textContent = "🎉 BLACKOUT! All 16 squares — " + entries + " raffle entries!";
+          statusEl.className = "status win";
+        } else if (lineCount > 0) {
+          var word = entries === 1 ? "entry" : "entries";
+          statusEl.textContent = "🎉 BINGO! " + lineCount + " line" + (lineCount === 1 ? "" : "s") +
+            " — " + entries + " raffle " + word + "!";
+          statusEl.className = "status win";
+        } else {
+          statusEl.textContent = count + " of 16 marked — your marks save in this browser.";
+          statusEl.className = "status";
+        }
+
+        // pop up when a new line is completed AND it earns a new entry
+        if (allowPopup && lineCount > prevLineCount && entries > Math.min(prevLineCount, MAX_ENTRIES)) {
+          showPopup(entries);
+        }
+        prevLineCount = lineCount;
+      }
+
+      board.addEventListener("click", function (e) {
+        var cell = e.target.closest(".cell");
+        if (!cell) return;
+        cell.classList.toggle("marked");
+        save();
+        update(true);
+      });
+
+      resetBtn.addEventListener("click", function () {
+        cells.forEach(function (c) { c.classList.remove("marked"); });
+        save();
+        hidePopup();
+        update(false);
+      });
+
+      modalClose.addEventListener("click", hidePopup);
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) hidePopup();
+      });
+
+      // restore + persist the player's name
+      try { nameInput.value = localStorage.getItem(NAME_KEY) || ""; } catch (e) {}
+      nameInput.addEventListener("input", function () {
+        try { localStorage.setItem(NAME_KEY, nameInput.value); } catch (e) {}
+      });
+
+      load();
+      update(false);
+    })();
+  </script>
+</body>
+</html>
